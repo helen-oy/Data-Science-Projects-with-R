@@ -1,0 +1,872 @@
+---
+title: "Coursework-20603681"
+author: "HELEN"
+date: "2023-12-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##INTRODUCTION
+
+This is a statistical analysis for an ornithologist of data collected on kittiwakes, a type of gull with two sub-species of kittiwake, black-legged and red-legged. The exploratory data analysis, statistical inferences, correlation, fitting linear models, check for dependence and drawing inference from multiple comparisons between the sub-species of the kittiwake.
+
+#Question1
+
+```{r}
+data<-read.csv("Kittiwake_Observation_20603681.csv")
+```
+
+```{r}
+Observation <-data
+
+```
+
+```{r}
+Observation
+```
+
+```{r}
+head(Observation)
+```
+
+```{r}
+
+dim(Observation)
+```
+
+# Exploring the observation data
+
+Summary statistics:Measures of Central tendency and Variability
+
+```{r}
+df_obs = data.frame(Observation)
+df_obs
+```
+
+
+```{r}
+summary(Observation)
+```
+
+```{r}
+
+round(sd(Observation$dawn),2)
+round(sd(Observation$noon), 2)
+round(sd(Observation$mid.afternoon),2)
+round(sd(Observation$dusk),2)
+```
+
+```{r}
+par(mfrow=c(1,4))
+
+hist(Observation$dawn, xlab= "Dawn", ylim=c(0,0.05), freq=FALSE, main="Histogram for Observation data" )
+curve(dnorm(x, 102.21, 12.75), 40, 140, col=2,add=TRUE)
+
+hist(Observation$noon, xlab= "Noon", ylim=c(0,0.05), freq=FALSE)
+curve(dnorm(x, 70.46, 12.63),  40, 140, col=2,add=TRUE)
+
+hist(Observation$mid.afternoon, ylim=c(0,0.05), xlab= "Mid Afternoon",freq=FALSE)
+curve(dnorm(x, 76.61, 8.58), 40, 140, col=2,add=TRUE)
+
+hist(Observation$dusk, ylim=c(0,0.05),  xlab= "Dusk", freq=FALSE)
+curve(dnorm(x, 97.8, 16),  40, 140, col=2,add=TRUE)
+
+```
+
+Box plot for Observation data
+
+```{r}
+
+boxplot(Observation, col = rainbow(ncol(trees)))
+
+```
+
+# Question 1B. To construct a 90% confidence interval for the mean number of kittiwakes observed at dusk.
+
+Obtain the sample mean
+
+```{r}
+sampleMean <- round(mean(Observation$dusk),3)
+sampleMean
+```
+
+```{r}
+sampleSD <- round(sd(Observation$dusk),2)
+sampleSD
+```
+
+```{r}
+sampleVar = sampleSD**2
+sampleVar
+```
+
+```{r}
+hist(Observation$dusk, ylim=c(0,0.04),  xlab= "Dusk", freq=FALSE)
+curve(dnorm(x, 97.893, 16),  40, 140, col=2,add=TRUE)
+```
+
+Calculating the confidence interval at the upper and lower.
+
+```{r}
+n <- 28
+critical_value <- qt(0.95,n-1)
+critical_value
+```
+
+```{r}
+n <- 28  #sample size
+confidence_level <- 0.90
+
+lower<-sampleMean-qt(0.95, n-1)*sqrt(sampleVar/n) # calculate the lower limit of the confidence interval from the formula
+lower
+upper<-sampleMean+qt(0.95, n-1)*sqrt(sampleVar/n) # calculate the upper limit of the confidence interval from the formula
+upper
+
+```
+
+Using T-test to calculate the confidence interval
+
+```{r}
+t.test(Observation$dusk, conf.level = 0.9)$conf.int
+```
+
+```{r}
+#install.packages("ggplot2")
+
+```
+
+```{r}
+library(ggplot2)
+```
+
+```{r}
+
+df <- 27
+
+critical_value <- 1.703288
+
+#sequence of values for the x-axis
+x_values <- seq(-3, 3, length.out = 1000)
+
+# Creating a data frame with x values and corresponding probability density function (pdf) values
+df <- data.frame(x = x_values, pdf = dt(x_values, df))
+
+# Create a ggplot object with the t-distribution curve
+plot <- ggplot(df, aes(x = x, y = pdf)) +geom_line(color = "blue", linewidth = 1) +theme_minimal() + labs(title = "Critical Regions of t-Distribution", x = "t",y = "Probability Density Function")
+
+# Add shading to the critical regions
+plot + geom_ribbon(data = subset(df, abs(x) > critical_value), aes(ymax = pdf, ymin = 0), fill = "red", alpha = 0.3) + geom_vline(xintercept = c(-critical_value, critical_value), linetype = "dashed", color = "black") + annotate("text", x = critical_value + 0.2, y = 0.05, label = "Critical Region", color = "black", size = 3)
+
+
+
+#Reference: https://stackoverflow.com/questions/53323782/plotting-the-area-under-the-curve-of-various-distributions-in-r
+```
+
+# Question 2
+
+2.  Does the Historical data support the ornithologist's hypothesis that the decline in kittiwake numbers, over time, is independent of site? The ornithologist would like an estimate for the number of breeding pairs at site Site D in 2009.
+
+Q2a.
+
+```{r}
+data<-read.csv("Kittiwake_Historical_20603681.csv")
+```
+
+```{r}
+historical <- data
+```
+
+```{r}
+head(historical)
+
+```
+
+```{r}
+dim(historical)
+```
+
+```{r}
+colnames(historical)[1] <- "Year"
+```
+
+```{r}
+historical
+```
+
+```{r}
+
+rownames(historical) <- historical$Year
+ 
+historical <- historical[,-1]
+ 
+```
+
+```{r}
+observed <- as.matrix(historical)
+ 
+observed
+
+
+```
+
+```{r}
+#creating row sums and column sums for observed 
+YearObs<-rowSums(observed)  
+
+SiteObs<-colSums(observed)
+
+
+```
+
+```{r}
+observed_with_sums <- cbind(observed, rowSums = rowSums(observed))
+
+
+```
+
+```{r}
+observed_with_sums <- rbind(observed_with_sums, colSums = colSums(observed_with_sums))
+observed_with_sums
+```
+
+```{r}
+n<-sum(observed) 
+
+#to compute expected value in each category
+expected<-YearObs%*%t(SiteObs)/n 
+
+
+```
+
+```{r}
+#obtaining expected values
+rownames(expected)=c(2000,2004,2008,2012,2016,2020)
+
+expected
+
+
+```
+
+```{r}
+difference <- observed - expected
+difference
+```
+
+```{r}
+#to confirm test statistic correctness
+diff_sqd <- difference^2 
+diff_sqd
+print(diff_sqd/expected)
+print(sum(diff_sqd/expected))
+```
+
+```{r}
+#Test statistic
+
+chi_test<-sum((observed-expected)^2/expected)
+
+chi_test
+```
+
+```{r}
+#To obtain the critical value
+#at chosen significance level of 0.05
+significance_level <- 0.05
+criticalValue <-qchisq(1-significance_level,  df =15)
+criticalValue
+
+```
+
+```{r}
+chi_square_statistic <- 5.177
+
+
+df <- 15 
+
+# Calculating the p-value
+print(1- pchisq(chi_square_statistic, df))
+
+```
+
+```{r}
+#To obtain the critical value
+#at chosen significance level of 0.01
+significance_level <- 0.01
+criticalValue <-qchisq(1-significance_level,  df =15)
+criticalValue
+
+```
+
+# Question 2B
+
+```{r}
+historical<-read.csv("Kittiwake_Historical_20603681.csv")
+```
+
+```{r}
+colnames(historical)[1] <- "Year"
+```
+
+```{r}
+historical
+```
+
+```{r}
+
+historical 
+```
+
+```{r}
+
+
+# Rename the column names
+new_names <- c("Year", "Site_A", "Site_B", "Site_C", "Site_D")
+colnames(historical) <- new_names
+
+# Display the resulting data frame
+print(historical)
+
+```
+
+```{r}
+#correlation analysis to check for linear relationship or another relationship.
+
+correlation_site_A <- cor(historical$Year, historical$Site_A)
+correlation_site_B <- cor(historical$Year, historical$Site_B)
+correlation_site_C <- cor(historical$Year, historical$Site_C)
+correlation_site_D <- cor(historical$Year, historical$Site_D)
+
+# correlation coefficients
+print( round(correlation_site_A, 4))
+print(round(correlation_site_B, 4))
+print(round(correlation_site_C, 4))
+print(round(correlation_site_D, 4))
+
+```
+
+```{r}
+#correlation test to check year and site D
+cor.test(historical$Year, historical$Site_D)
+
+```
+
+```{r}
+# Produce a scatter plot to check relationship between year and site D .
+plot(historical$Year, historical$Site_D, xlab="year",ylab="Site") 
+```
+
+The relationship looks approximately linear. We can fit the linear model using the `lm` command.
+
+```{r}
+ # Using the lm function to fit a linear model
+breeding_pairs <- c(historical$Site_D)
+year <- c(historical$Year)
+model=lm(breeding_pairs~year)
+# Display the estimated coefficients
+model 
+
+```
+
+```{r}
+# plotting the fitted model
+plot(year, breeding_pairs, xlab="Year",ylab="breeding pairs") # Produce a scatter plot
+abline(a=model$coef[1],b=model$coef[2])# Overlay the fitted line with intercept a and slope b
+```
+
+Now let's check the model assumptions. We can observe linearity above so Now we check normality and homogeneity.
+
+```{r}
+# histogram of residuals
+hist(model$residuals, main="Site D vs Year", xlab="Residuals",freq=FALSE) 
+
+# Overlay normal density curve, with sd of residuals, (-20,20) is the range to consider, lty=2 makes it a dashed line, and add=TRUE adds the line to the previous plot.
+curve(dnorm(x,0,summary(model)$sigma),-20, 20,lty=2,add=TRUE) 
+
+# Plot the residuals against fitted values.
+abline(h=0,lty=2) # add a horizontal dashed line at 0
+plot(model$fitted.values, model$residuals, xlab="Fitted values",ylab="Residuals", main="Site D vs Year") 
+```
+
+we can see the model is not normal from the Histogram plot of residuals. and we observe the residuals have consistent variance across different levels of the predictors.
+
+```{r}
+newdata<- data.frame(year = 2009)
+ # A vector of hypothetical values at which to predict year
+
+pred<-predict(model,newdata = newdata , interval="prediction") # Use the predict function to calculate the predictions
+pred # Observe the predictions and prediction intervals
+```
+
+```{r}
+summary(model)
+```
+
+# Question 3.
+
+#Question 3a. Creating a visual summary of the measurement data.
+
+```{r}
+data3 <-read.csv("Kittiwake_Measurement_20603681.csv")
+head(data3)
+```
+
+```{r}
+black_leg <- subset(data3, Sub.species =="Black-legged")
+red_leg <- subset(data3, Sub.species == "Red-legged")
+
+black_leg
+red_leg
+
+
+
+```
+
+```{r}
+
+black_leg <- black_leg[, c("Weight", "Wingspan", "Culmen")]
+red_leg <- red_leg[, c("Weight", "Wingspan", "Culmen")]
+black_leg
+red_leg
+```
+
+```{r}
+#plotting a scatter plot for each table: black_leg of culmen against weight.
+
+# Scatter plot
+plot(black_leg$Weight, black_leg$Culmen, 
+     xlab = "Weight", ylab = "Culmen Length",
+     main = "Scatter Plot of Black-legged Kittiwakes",
+     pch = 16, col = "blue")
+
+# Adding wingspan as a third dimension using point size
+points(black_leg$Weight, black_leg$Culmen, 
+       cex = black_leg$Wingspan / max(black_leg$Wingspan) * 2, 
+       pch = 16, col = "blue")
+
+# Adding a legend for the point size
+legend("topright", legend = "Wingspan", 
+       pch = 16, col = "blue", 
+       title = "Point Size", cex = 0.8)
+
+# Display the plot
+dev.new()
+
+```
+
+```{r}
+#plotting a scatter plot for each table: red_leg of culmen against weight.
+
+# Scatter plot
+plot(red_leg$Weight, red_leg$Culmen, xlab = "Weight", ylab = "Culmen Length", main = "Scatter Plot of Red-legged Kittiwakes",pch = 16, col = "blue")
+
+# Adding wingspan as a third dimension using point size
+points(red_leg$Weight, red_leg$Culmen, cex = red_leg$Wingspan / max(red_leg$Wingspan) * 2, pch = 16, col = "blue")
+
+# Adding a legend for the point size
+legend("topright", legend = "Wingspan", pch = 16, col = "blue", title = "Point Size", cex = 0.8)
+
+# Display the plot
+dev.new()
+```
+
+Scatter plot of culmen against weight and the wingspan as a point size does not depict much relationship between the weight, culmen length and wingspan.
+
+```{r}
+#plotting a scatter plot for each table: black_leg of Wingspan against weight culmen as a third dimension using point size
+
+# Scatter plot
+plot(black_leg$Weight, black_leg$Wingspan, 
+     xlab = "Weight", ylab = "Wingspan ",
+     main = "Scatter Plot of Black-legged Kittiwakes",
+     pch = 16, col = "blue")
+
+# Adding culmen as a third dimension using point size
+points(black_leg$Weight, black_leg$Wingspan, 
+       cex = black_leg$Culmen / max(black_leg$Culmen) * 2, 
+       pch = 16, col = "blue")
+
+# Adding a legend for the point size
+legend("topright", legend = "Culmen", 
+       pch = 16, col = "blue", 
+       title = "Point Size", cex = 0.8)
+
+# Display the plot
+dev.new()
+
+```
+
+The scatter plot shows there is a relationship between the wingspan and the weight as against the plot of culmen against weight
+
+```{r}
+#plotting a scatter plot for each table: red_leg of Wingspan against weight culmen as a third dimension using point size
+
+# Scatter plot
+plot(red_leg$Weight, red_leg$Wingspan, xlab = "Weight", ylab = "Wingspan ", main = "Scatter Plot of Red-legged Kittiwakes",pch = 16, col = "blue")
+
+# Adding culmen as a third dimension using point size
+points(red_leg$Weight, red_leg$Wingspan, cex = red_leg$Culmen / max(red_leg$Culmen) * 2, pch = 16, col = "blue")
+
+# Adding a legend for the point size
+legend("topright", legend = "Culmen", pch = 16, col = "blue", title = "Point Size", cex = 0.8)
+
+# Display the plot
+dev.new()
+```
+
+
+
+```{r}
+
+summary(black_leg)
+
+```
+
+```{r}
+summary(red_leg)
+```
+
+
+
+```{r}
+par(mfrow=c(1,3))
+hist(red_leg$Weight, xlab= "Weight of Red-leg kittiwakes)",freq=FALSE, ylim=c(0,0.25), col=c(2,3), main= "Histogram for Red-legged kittiwakes" )
+hist(red_leg$Wingspan, xlab= "Wingspan of Red-leg kittiwakes)",freq=FALSE, ylim=c(0,0.25), col=c(2,3), main= "Histogram for Red-legged kittiwakes" )
+hist(red_leg$Culmen, xlab= "Culmen of Red-leg kittiwakes)",freq=FALSE, ylim=c(0,0.25), col=c(2,3), main= "Histogram for Red-legged kittiwakes" )
+
+hist(black_leg$Weight, xlab= "Weight of Black-leg kittiwakes)",freq=FALSE, ylim=c(0,0.25), col=c(2,3), main= "Histogram for Black-legged kittiwakes" )
+hist(black_leg$Wingspan, xlab= "Wingspan of Black-leg kittiwakes)",freq=FALSE, ylim=c(0,0.25), col=c(2,3), main= "Histogram for Black-legged kittiwakes" )
+hist(black_leg$Culmen, xlab= "Culmen of Black-leg kittiwakes)",freq=FALSE, ylim=c(0,0.25), col=c(2,3), main= "Histogram for Black-legged kittiwakes" )
+```
+
+```{r}
+#Plotting boxplot for black-leg and red-leg kittiwakes
+boxplot(black_leg, col = rainbow(ncol(trees)))
+boxplot(red_leg, col = rainbow(ncol(trees)))
+
+```
+
+The joint boxplot does not give a good visual summary rather an individual summary.
+
+Trying the seperate box plot.
+
+```{r}
+#Boxplot of Weight, Wingspan and Culmen of Black-legged Kittwakes.
+boxplot(black_leg$Weight , horizontal=TRUE, xlab= "Weight", main= "Weight of Black-legged Kittiwakes." )
+boxplot(black_leg$Wingspan , horizontal=TRUE, xlab= "Wingspan", main= "Wingspan of Black-legged Kittiwakes." )
+boxplot(black_leg$Culmen , horizontal=TRUE, xlab= "Culmen", main= "Culmen of Black-legged Kittiwakes." )
+```
+```{r}
+#Boxplot of Weight, Wingspan and Culmen of Red-legged Kittwakes.
+boxplot(red_leg$Weight , horizontal=TRUE, xlab= "Weight", main= "Weight of Red-leggedKittiwakes." )
+boxplot(red_leg$Wingspan , horizontal=TRUE, xlab= "Wingspan", main= "Wingspan of Red-legged Kittiwakes." )
+boxplot(red_leg$Culmen , horizontal=TRUE, xlab= "Culmen", main= "Culmen of Red-legged Kittiwakes." )
+```
+```
+
+
+
+
+# Question 3b
+
+For each sub-species, is wing span and culmen length independent?
+
+```{r}
+#getting mean and sd for weight and culment length both red-leg species
+round(mean(red_leg$Wingspan), 3)
+round(mean(red_leg$Culmen), 3)
+round(sd(red_leg$Wingspan), 3)
+round(sd(red_leg$Culmen), 3)
+```
+
+```{r}
+#check for normality for red legged specie inputing the mean and sd
+
+hist(red_leg$Wingspan, xlab= "Wingspan of Red-leg kittiwakes)",freq=FALSE, ylim=c(0,0.1), col=c(2,3), main= "Histogram for Red-legged kittiwakes" )
+curve(dnorm(x, 105.429, 6.465), 50, 130,, col=2,add=TRUE)
+
+hist(red_leg$Culmen, xlab= " Red-leg Culmen Length kittiwakes)",freq=FALSE, ylim=c(0,0.3), col=c(2,3), main= "Histogram for Red-legged Culmen Length kittiwakes" )
+curve(dnorm(x, 30.429, 4.237),  20, 40, col=2, add=TRUE)
+
+```
+
+for the red-legged specie, we can see that it is not a normal distribution, the culmen length is skewed to the right (positive skewness) while the Wingspan is skewed to the right too(positive skewness) and earlier we see there is no linear correlation between the culmen length and weight of the red-legged specie. therefor we perform a correlation test finally to check for independence.
+
+```{r}
+cor.test(red_leg$Wingspan,red_leg$Culmen)
+```
+
+```{r}
+plot(red_leg$Wingspan, red_leg$Culmen, xlab="Wingspan",ylab="Culmen") 
+```
+
+
+
+```{r}
+r <-0.3156
+n <- length(red_leg$Wingspan)
+n
+t <- r*(sqrt((n-2)/(1-r^2)))
+t
+```
+
+```{r}
+critical_value_red <- qt(0.995,12)
+critical_value_red 
+```
+
+Black legged
+
+```{r}
+#getting mean and sd for weight and culment lenght  black leg species
+round(mean(black_leg$Wingspan), 3)
+round(mean(black_leg$Culmen), 3)
+round(sd(black_leg$Wingspan), 3)
+round(sd(black_leg$Culmen), 3)
+```
+
+```{r}
+#check for normality for black legged specie inputing the mean and sd
+
+hist(black_leg$Wingspan, xlab= "Wingspan of black_leg kittiwakes)",freq=FALSE, ylim=c(0,0.1), col=c(2,3), main= "Histogram for black leg kittiwakes" )
+curve(dnorm(x, 110.125, 9.287),  50, 130, col=2,add=TRUE)
+
+hist(black_leg$Culmen, xlab= "black_leg Culmen Length kittiwakes)",freq=FALSE, ylim=c(0,0.35), col=c(2,3), main= "Histogram for black_leg Culmen length kittiwakes" )
+curve(dnorm(x, 38.375, 1.962), 20, 45, col=2,add=TRUE)
+```
+
+```{r}
+plot(black_leg$Wingspan, black_leg$Culmen, xlab="Wingspan",ylab="Culmen")
+```
+
+```{r}
+cor.test(black_leg$Wingspan, black_leg$Culmen)
+```
+
+```{r}
+#correlation coefficient
+r <-0.3851
+n <- length(black_leg$Wingspan)
+n
+```
+
+```{r}
+
+t <- r*(sqrt((n-2)/(1-r^2)))
+t
+```
+
+```{r}
+#
+critical_value_black <- qt(0.995,14)
+critical_value_black 
+```
+
+# Question 3c.
+
+c)  Is there evidence that the weights of birds of the two sub-species are different? using the t-test statisitc to get the variance and the t value.
+
+```{r}
+var.test(red_leg$Weight, black_leg$Weight)
+```
+
+```{r}
+t.test(red_leg$Weight, black_leg$Weight,var.equal=TRUE )
+```
+
+```{r}
+critical_t_value<-qt(0.975, df=16+14-2)
+critical_t_value
+```
+
+Therefore, there is evidence that the weight of the of black-legged and red-legged kittiwakes are not the same. We reject the null hypothesis at 5% significance level.
+
+# Question 3d hypothesis testing: • If the wingspan of black-legged and red-legged kittiwakes are different. • If culmen length of black-legged and red-legged kittiwakes are different. • If the weights of black-legged and red-legged are different.
+
+```{r}
+
+#If the wingspan of black-legged and red-legged kittiwakes are different.
+t.test(black_leg$Wingspan, red_leg$Wingspan, var.equal = TRUE)
+
+```
+
+```{r}
+
+#If culmen length of black-legged and red-legged kittiwakes are different
+t.test(black_leg$Culmen, red_leg$Culmen, var.equal = TRUE)
+
+```
+
+```{r}
+#If the weights of black-legged and red-legged are different.
+t.test(red_leg$Weight, black_leg$Weight,var.equal=TRUE )
+```
+
+```{r}
+
+pvalues<-rep(NA,3) # create a blank vector to store p values
+pvalues[1]<-t.test(black_leg$Wingspan, red_leg$Wingspan, var.equal = TRUE)$p.value 
+pvalues[2]<-t.test(black_leg$Culmen, red_leg$Culmen, var.equal = TRUE)$p.value 
+pvalues[3]<-t.test(red_leg$Weight, black_leg$Weight,var.equal=TRUE )$p.value 
+
+plot(pvalues,xlab="Test",ylab="p-value") # plot the p values
+abline(h=0.05,col=2) # add horizontal line at 0.05, coloured red
+```
+
+This result shows only 1 test is significant which is test 2 for black_leg Culmen length and red_leg Culmen length. Using the Bonferonni correction:
+
+```{r}
+m<-length(pvalues) # number of tests
+plot(pvalues,xlab="Test",ylab="p-value") # plot the p values
+abline(h=0.05/m,col=2) # add horizontal line at 0.05/m
+```
+
+Based on the Bonferroni correction Figure 8a. : if pi \< α/m and the p-value falls below the line in the plot, we reject the null hypothesis Hypothesis test 1: we do not reject the null hypothesis, p1\> α/m. Therefore, the wingspan of black-legged and red-legged kittiwakes are not different. Hypothesis test 2: we reject the null hypothesis, pi \< α/m. Therefore, the culmen of black-legged and red-legged kittiwakes are different. Hypothesis test 3: we do not reject the null hypothesis p1\> α/m. Therefore, the wingspan of black-legged and red-legged kittiwakes are approximately similar are not different.
+
+Now the Benjamin Hochberg procedure gives:
+
+```{r}
+plot(sort(pvalues),xlab="Ordered hypothesis test",ylab="p-value") # plot the p values in order from smallest to biggest
+lines(1:m,0.05*(1:m)/m,col=2) # add a line showing 0.05*k/m for each value of k between 1 and m.
+```
+
+So this suggests the tests with the smallest $p$-values are signficant after all and only one siginficant test.
+
+# Question 4.
+
+```{r}
+location <- read.csv("Kittiwake_Location_20603681.csv")
+head(location)
+```
+
+```{r}
+dim(location)
+```
+
+For the Location data the ornithologist asks you to: a) Fit a linear model to predict the number of breeding pairs
+
+# Question 4a-c
+
+Firstly, we fit a linear model to the data using all the covariates.
+
+```{r}
+model1=lm(Breeding.pairs~.,data=location)
+summary(model1)
+```
+
+We note that for the categorical (coastal direction): East is taken to have coefficient 0 as the first category for coastal direction. the coefficient Coast.direction North is the expected difference in the number of breeding pairs of kittiwakes in the North as compared to the East.
+
+The Summer Temperature has a high p-value, suggesting it is not important in the model. We can use the `step` function on `model1` (the full model) to test which covariates are important.
+
+```{r}
+AIC(model1)
+```
+
+check for fit of linear model for model1 Using the AIC function
+
+```{r}
+
+model1=lm(Breeding.pairs~.,data=location)
+step(model1,step=1) 
+
+```
+
+At the start the AIC is =265.96.
+
+```{r}
+model1<-lm(Breeding.pairs~.,data=location) # Fit a linear model with Breeding pairs  as the response variable and everything else as a covariate
+step(model1,step=2) # Try removing each covariate in turn.  Stop after two covariates have been removed ("step=2")
+```
+
+After removing Summer temp. in the first step the AIC is 263.98. Removing Sandeel cause the AIC to increase to 276.76. We end the process.
+
+```{r}
+model1<-lm(Breeding.pairs~.,data=location) # Fit a linear model with Breeding pairs  as the response variable and everything else as a covariate
+bestmodel1<-step(model1) # Try removing each covariate in turn.  Stop when no further reduction in AIC can be found
+summary(bestmodel1) # Display a summary of the model with the lowest AIC
+```
+
+For the model selected by the step function, we plot a histogram of the residuals and a scatter plot of residuals vs. fitted values
+
+```{r}
+
+hist(bestmodel1$residuals,xlab="Residuals",main="",freq=FALSE)
+curve(dnorm(x,0,sd(bestmodel1$residuals)),-200,200,col=2,add=TRUE) 
+plot(bestmodel1$fitted.values,bestmodel1$residuals,xlab="Fitted values",ylab="Residuals")
+
+```
+
+The residuals certainly appear to follow a normal distribution and there is no pattern in the residuals. Therefore the model assumptions appear to be adequately satisfied.
+
+Test for the logarithm of the number of the breeding pairs.
+
+```{r}
+modelb<-lm(log(Breeding.pairs)~.,data=location) # Fit a linear model with Breeding pairs  as the response variable and everything else as a covariate
+summary(modelb)
+```
+
+```{r}
+AIC(modelb)
+
+```
+
+Using the AIC function
+
+```{r}
+
+step(modelb,step=1) # 
+```
+
+At the start the AIC is =-155.21
+
+```{r}
+modelb<-lm(log(Breeding.pairs)~.,data=location)
+ # Fit a linear model with Breeding pairs  as the response variable and everything else as a covariate
+step(modelb,step=2) # Try removing each covariate in turn.  Stop after two covariates have been removed ("step=2")
+```
+
+After removing Summer temp. in the first step the AIC reduces from -155.21 is -156.733. Removing Sandeel cause the AIC to increase to -84.594. We end the process.
+
+```{r}
+modelb<-lm(log(Breeding.pairs)~.,data=location)# Fit a linear model with Breeding pairs  as the response variable and everything else as a covariate
+bestmodel2<-step(modelb) # Try removing each covariate in turn.  Stop when no further reduction in AIC can be found
+summary(bestmodel2) # Display a summary of the model with the lowest AIC
+```
+
+# Question 4d
+
+For the model selected by the step function, we plot a histogram of the residuals and a scatter plot of residuals vs. fitted values
+
+```{r}
+
+hist(bestmodel2$residuals,xlab="Residuals",main="",freq=FALSE)
+curve(dnorm(x,0,sd(bestmodel2$residuals)),-0.200,0.200,col=2,add=TRUE) 
+plot(bestmodel2$fitted.values,bestmodel2$residuals,xlab="Fitted values",ylab="Residuals")
+
+```
+
+The residuals certainly appear to follow a normal distribution and there is no pattern in the residuals. Therefore the model assumptions appear to be adequately satisfied.
+
+# Question 4e
+
+```{r}
+#prediction of the number of breeding pairs.
+
+modelb<-lm(log(Breeding.pairs)~.,data=location)
+pred_number=predict(modelb,newdata=data.frame(Coast.direction = "West", sandeel = 2.23, Summer.temp =19.9, cliff.height =3.5),interval='confidence', level = 0.98)
+pred_number
+
+```
+
+this provides the logarithm of the number of breeding pairs.
+
+```{r}
+no_of_breedingPairsfit <- exp(4.277468)
+no_of_breedingPairsfit
+no_of_breedingPairslwr<-exp(4.194717)
+no_of_breedingPairslwr
+no_of_breedingPairsUpr <- exp(4.360219)
+no_of_breedingPairsUpr
+```
