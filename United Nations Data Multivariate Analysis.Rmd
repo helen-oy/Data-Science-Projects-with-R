@@ -1,0 +1,981 @@
+---
+title: "MV_Coursework_rmd_2060361"
+author: "HELEN SOREMEKUN"
+date: "2024-03-19"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```
+```{r}
+#install.packages("rmarkdown")
+```
+```{r}
+#setting CRAN mirror 
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+```
+
+```{r}
+update.packages(ask = FALSE)
+
+```
+
+
+## Introduction
+
+This is an analysis of United Nations dataset about the GDP per capita, the life expectancy, and the population of 141 different countries from 1952 to 2007 at a five-year interval.
+
+This dataset consists of multiple variables that are suitable for key multivariate analysis, dimension reduction, dimension scaling, correlation and regression analysis, discriminant analysis and clustering. The aim of this multivariate analysis is to produce useful insights from three measurements, the GDP per capita, the life expectancy and the population size from the data set. 
+
+
+#loading the UN dataset.
+```{r loading dataset}
+UN <- read.csv('UN.csv')
+
+#head(UN)
+```
+##.
+
+## Exploratory Data Analysis
+The exploratory data analysis covers loading the dataset into the R studio, data cleaning and visualisation with R packages. The data cleaning process consists of the summary statistics, checks for missing values in rows, duplicate rows, and checks for outliers in the GDP Per Capita, Life Expectancy in the data set. 
+
+#Check for missing values
+```{r}
+missing_values <- colSums(is.na(UN))
+if (any(missing_values > 0)) {
+  print("Columns with missing values:")
+  print(missing_values[missing_values > 0])
+} else {
+  print("No missing values found.")
+}
+```
+```{r}
+# Check for duplicate rows
+duplicate_rows <- UN[duplicated(UN), ]
+if (nrow(duplicate_rows) > 0) {
+  print("Duplicate rows found:")
+  print(duplicate_rows)
+} else {
+  print("No duplicate rows found.")
+}
+```
+```{r}
+#Boxplot for numerical columns to visualize outliers
+boxplot(UN$gdpPercap_1952, main="Boxplot of GDP per Capita in 1952", ylab="GDP per Capita")
+```
+#Figure 1. Boxplot of GDP per Capita in 1952.
+
+```{r}
+#Outlier detection using Z-score method for GDP per Capita in 1952
+z_scores <-
+  (UN$gdpPercap_1952 - mean(UN$gdpPercap_1952)) / sd(UN$gdpPercap_1952)
+outliers <- UN[abs(z_scores) > 3,]
+if (nrow(outliers) > 0) {
+  print("Outliers found in GDP per Capita in 1952:")
+  print(outliers)
+} else {
+  print("No outliers found in GDP per Capita in 1952.")
+}
+```
+
+#Summary Statistics of the whole UN data
+```{r}
+#summary(UN)
+```
+# Interpretation of results:Initial  Exploratory Data Analysis.
+The data set appears to have been cleaned, no missing values or duplicate rows were found. There were a few outliers in GDPs per Capita for some countries, over the years. The average GDPs per Capita appears to increase rapidly over the years Oceania and Europe with Oceania having the highest economic growth over the years. Africa has the lowest rate of increase over the year with some dips around 1990 and then a rise towards 2007.
+
+
+
+#Installing and loading necessary packages
+```{r}
+#installing packages 
+install.packages("dplyr", dependencies = TRUE)
+install.packages("tidyr", dependencies = TRUE)
+install.packages("ggplot2", dependencies = TRUE)
+```
+
+```{r}
+install.packages("corrplot")
+library(corrplot)
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+
+#data visualization
+In this exploration, the relationship between the average life expectancy and GDP per capita over time for each continent was obtained using line plots. The comparison between the correlation between GDPs per Capita and Life Expectancy in 1952 and 2007 was obtained using scatterplots. The economic growth, population, and life expectancy of each continent over time was visualized with the line plot.
+
+
+#how the average life expectancy and GDP per capita for each continent has changed through time.
+
+```{r}
+
+# Reshaping the GDP per capita data to long format
+gdp_long <- UN %>%
+  gather(key = "year_gdp", value = "gdpPercap", starts_with("gdpPercap_")) %>%
+  mutate(year = as.integer(substr(year_gdp, 11, 14))) %>% # Extracting the year from column names
+  select(-year_gdp)
+```
+
+
+
+```{r}
+# Reshaping the life expectancy data to long format
+lifeExp_long <- UN %>%
+  gather(key = "year_lifeExp", value = "lifeExp", starts_with("lifeExp_")) %>%
+  mutate(year = as.integer(substr(year_lifeExp, 9, 12))) %>% # Extracting the year from column names
+  select(-year_lifeExp)
+```
+
+
+
+
+```{r}
+# Joining the reshaped GDP and life expectancy data by their common columns
+df_long <- left_join(gdp_long, lifeExp_long, by = c("continent", "country", "year"))
+
+# obtaining the mean GDP per capita and life expectancy for each continent and year
+df_avg <- df_long %>%
+  group_by(continent, year) %>%
+  summarise(avg_gdpPercap = mean(gdpPercap, na.rm = TRUE),
+            avg_lifeExp = mean(lifeExp, na.rm = TRUE))
+```
+
+
+#lets explore the trend life expectancy over years in continent.
+```{r}
+# Plotting the average life expectancy over time for each continent
+ggplot(df_avg, aes(x = year, y = avg_lifeExp, group = continent, color = continent)) +
+  geom_line() +
+  theme_minimal() +
+  labs(title = "Average Life Expectancy Over Time by Continent",
+       x = "Year",
+       y = "Average Life Expectancy")
+```
+#Figure 2. Average Life Expectancy Over Time by Continent.
+
+#lets check economic growth countries/continents over the years.
+```{r}
+# Plotting the average GDP per capita over time for each continent
+ggplot(df_avg, aes(x = year, y = avg_gdpPercap, group = continent, color = continent)) +
+  geom_line() +
+  theme_minimal() +
+  labs(title = "Average GDP per Capita Over Time by Continent",
+       x = "Year",
+       y = "Average GDP per Capita")
+
+```
+
+#Figure 3. Average GDP per Capita Over Time by Continent.
+
+
+#lets explore how population per continent grew over years considering each continent
+```{r}
+
+UN %>%
+  pivot_longer(
+    cols = starts_with("pop_"),
+    names_to = "year",
+    values_to = "population",
+    names_prefix = "pop_"
+  ) %>%
+  mutate(year = as.numeric(year)) %>%
+  group_by(continent, year) %>%
+  summarise(total_population = sum(population, na.rm = TRUE), .groups = "drop") %>%
+  ggplot(aes(x = year, y = total_population, color = continent)) +
+    geom_point() +  
+    geom_line(aes(group = continent)) +   # Adding lines to connect points for each continent
+    labs(x = "Year", y = "Total Population", title = "Population Growth Over Time by Continent") +
+    theme_minimal()
+```
+#Figure 4. Population Growth Over Time by Continent.
+
+
+# Interpretation of data visualization.
+The Life Expectancy over years  …..
+        “ country name”      has the highest population growth over years                    
+. In 1952,   “ country name”  appears to have high life span economic growth, by 2007, “ country name”     still has an increasing growth in economy that appears to influence the lifespan of the people.
+
+
+#lets check the correlation between GDP and Life expectancy.
+
+#correlation between GDP and Life expectancy in 1952
+```{r}
+#Correlation between GDP per Capita and Life Expectancy in 1952 
+gdp_long <- UN %>%
+  pivot_longer(
+    cols = starts_with("gdpPercap_"),
+    names_to = "year",
+    values_to = "gdpPercap",
+    names_prefix = "gdpPercap_"
+  ) %>%
+  mutate(year = as.integer(year))
+
+lifeExp_long <- UN %>%
+  pivot_longer(
+    cols = starts_with("lifeExp_"),
+    names_to = "year",
+    values_to = "lifeExp",
+    names_prefix = "lifeExp_"
+  ) %>%
+  mutate(year = as.integer(year))
+
+# Joining the GDP and life expectancy dataframes
+df_joined <- left_join(gdp_long, lifeExp_long, by = c("continent", "country", "year"))
+
+# checking for 1952
+df_filtered <- df_joined %>%
+  filter(year == 1952)
+
+# thhe scatter plot
+ggplot(df_filtered, aes(x = gdpPercap, y = lifeExp, color = continent)) +
+  geom_point() +
+  labs(
+    title = "Correlation between GDP per Capita and Life Expectancy in 1952",
+    x = "GDP per Capita",
+    y = "Life Expectancy"
+  ) +
+  theme_minimal() +
+  scale_x_log10() #logarithmic scale for GDP per Capita for clarity
+```
+#Figure 5. Correlation between GDP per Capita and Life Expectancy in 1952.
+
+#correlation between GDP and Life expectancy in 2007
+```{r}
+# Correlation between GDP per Capita and Life Expectancy in 2007
+gdp_long <- UN %>%
+  pivot_longer(
+    cols = starts_with("gdpPercap_"),
+    names_to = "year",
+    values_to = "gdpPercap",
+    names_prefix = "gdpPercap_"
+  ) %>%
+  mutate(year = as.integer(year))
+
+lifeExp_long <- UN %>%
+  pivot_longer(
+    cols = starts_with("lifeExp_"),
+    names_to = "year",
+    values_to = "lifeExp",
+    names_prefix = "lifeExp_"
+  ) %>%
+  mutate(year = as.integer(year))
+
+# Joining the GDP and life expectancy dataframes
+df_joined <- left_join(gdp_long, lifeExp_long, by = c("continent", "country", "year"))
+
+# checking for 2007
+df_filtered <- df_joined %>%
+  filter(year == 2007)
+
+# thhe scatter plot
+ggplot(df_filtered, aes(x = gdpPercap, y = lifeExp, color = continent)) +
+  geom_point() +
+  labs(
+    title = "Correlation between GDP per Capita and Life Expectancy in 2007",
+    x = "GDP per Capita",
+    y = "Life Expectancy"
+  ) +
+  theme_minimal() +
+  scale_x_log10() #logarithmic scale for GDP per Capita for clarity
+
+```
+#Figure 6. Correlation between GDP per Capita and Life Expectancy in 2007.
+
+
+##Figure 7. under consideration Correlation between average GDP per Capita and average Life Expectancy by Continent
+
+
+#loading the three partitions measurement
+```{r}
+
+#The GDP per capita.
+gdp <- UN[,3:14] # The GDP per capita.
+years <- seq(1952, 2007,5)
+colnames(gdp) <- years
+rownames(gdp) <- UN[,2]
+
+#The life expectancy
+lifeExp <- UN[,15:26] # the life expectancy
+colnames(lifeExp) <- years
+rownames(lifeExp) <- UN[,2]
+
+
+#The population size
+popn <- UN[,27:38] # the population size
+colnames(popn) <- years
+rownames(popn) <- UN[,2]
+```
+
+#.
+
+## Clustering
+```{r}
+UN.scaled <- UN[,1:26] 
+UN.scaled[,3:26] <- scale(UN[,3:26])
+```
+
+
+```{r}
+UN2 <- UN.scaled[,3:26] 
+```
+
+#Trying K-means clustering to select number of clusters.
+# with 2 clusters
+```{r}
+set.seed(123)
+(UN.k <- kmeans(UN2, centers =2, nstart=25))
+```
+
+```{r}
+install.packages("factoextra")
+library(factoextra)
+```
+
+
+```{r}
+fviz_cluster(UN.k, data = UN2, geom = "point" )
+
+```
+#Figure 8.  Cluster plot with 2 clusters centers.
+
+
+```{r}
+
+set.seed(123)
+(UN.k <- kmeans(UN2, centers =3, nstart=25))
+
+```
+
+```{r}
+fviz_cluster(UN.k, data = UN2, geom = "point" )
+```
+#Figure 9.  Cluster plot with 3 clusters centers.
+
+```{r}
+set.seed(123)
+(UN.k <- kmeans(UN2, centers =5, nstart=25))
+```
+
+```{r}
+fviz_cluster(UN.k, data = UN2, geom = "point" )
+```
+
+#Figure 10.  Cluster plot with 5 clusters centers.
+
+
+# Elbow method to get the optimalnumber of clusters
+```{r}
+fviz_nbclust(UN2, kmeans, method = "wss")
+```
+#Figure 11. Elbow plot to determine optimal number of clusters.
+
+#Based on the observation of the I will probably decide that there are most likely three natural clusters, as there is a reasonable decrease in the within-cluster sum of squares W when moving from 2 to 3 clusters, but moving to 3 only yields a minor improvement.
+
+# Trying the hierarchical based clustering
+
+
+
+
+```{r}
+UN.sl <-hclust(dist(UN2, method ="euclidean"), method="single")
+plot(UN.sl, labels = UN$continent, cex=0.5)
+```
+#Figure 12. Single linkage method.
+
+
+```{r}
+UN.comp <-hclust(dist(UN2, method ="euclidean"), method="complete")
+
+plot(UN.comp, labels = UN$continent, cex=0.5)
+```
+#Figure 13. complete linkage method.
+
+
+```{r}
+UN.av <-hclust(dist(UN2, method ="euclidean"), method="average")
+
+plot(UN.av, labels = UN$continent, cex=0.5)
+
+```
+#Figure 14. average linkage method
+
+
+```{r}
+UN.ward <-hclust(dist(UN2, method ="euclidean"), method="ward.D2")
+
+plot(UN.ward, labels = UN$continent, cex=0.5)
+```
+#Figure 15. Ward linkage method.
+
+#Based on observation Figure 13. the complete and Figure 15. ward linkage dendrograms appears to be very close, but single and average  linkage method is completely different.
+#To see that the complete and ward linkage dendrograms are similar, they will be used to create 3clusters to observe the simmilarities.
+
+
+
+#cutting the dendogram to give 3 distinct groups and computing the confusion matrix comparing the clusters found with the Continent label.
+
+
+```{r}
+table(cutree(UN.comp, k=3), cutree(UN.ward, k=3))
+```
+#The cluster labels are arbitrary, so in this case can see the 3 clusters found are fairly similar with a single difference in cluster assignment.
+
+
+
+#. 
+
+## Linear Discriminant Analysis.
+
+
+#Transforming the data to the long format consisting of the continents for each country and the average life expectancy, population and gdp per capita over 55 years to predict the continents
+```{r}
+pop_long <- UN %>%
+  gather(key = "year_pop", value = "pop", starts_with("pop_")) %>%
+  mutate(year = as.integer(substr(year_pop, 5, 8))) %>% # Extracting the year from column names
+  select(-year_pop)
+```
+
+
+
+
+```{r}
+UN_long <- gdp_long %>%
+  left_join(lifeExp_long, by = c("continent", "country", "year")) %>%
+  left_join(pop_long, by = c("continent", "country", "year"))
+
+
+```
+
+
+
+```{r}
+UN_avg <- UN_long %>%
+  group_by(continent, country) %>%
+  summarise(avg_gdpPercap = mean(gdpPercap, na.rm = TRUE),
+            avg_lifeExp = mean(lifeExp, na.rm = TRUE), avg_pop_= mean(pop, na.rm = TRUE))
+
+head(UN_avg)
+```
+#Using caret package to randomly split dataset into traina and test 
+
+```{r}
+install.packages("caret")
+library(caret)
+```
+
+```{r}
+install.packages("MASS")
+library(MASS)
+```
+#splitting dataset into  training and test set of ratio 70:30
+```{r}
+set.seed(123)
+
+partition = createDataPartition(UN_avg$continent, p=0.7, list = FALSE)
+
+UN_avg.test <-UN_avg[partition,]
+UN_avg.train <- UN_avg[-partition,]
+```
+
+```{r}
+
+```
+
+#Using linear discriminant analysis to train a classifier to predict the continent of each country.
+
+```{r}
+UN_lda = lda(continent ~ avg_gdpPercap + avg_lifeExp + avg_pop_, data =UN_avg.train)
+
+```
+
+
+```{r}
+UN_avg.predict <-predict(UN_lda, UN_avg.test)
+```
+
+#Test the accuracy of your model 
+
+```{r}
+accuracy = mean(UN_avg.predict$class == UN_avg.test$continent) *100 
+print(paste("The predictive accuracy is :", round(accuracy, 2),"%" )) #calculating the predictive accuracy on the test set
+```
+
+
+#The predictive accuracy appears to be fairly above average at 61.39 % using the average life expectancy, population and gdp per capita over 55 years to predict the continents.
+# Attempting to use all the years of the life expectancy, population and gdp per capita to train the classifier and compare results.
+```{r}
+table(UN_avg.predict$class, UN_avg.test$continent)
+```
+
+
+
+```{r}
+#splitting data set into  training and test set of ratio 70:30
+library(caret)
+set.seed(123)
+
+partition2 = createDataPartition(UN$continent, p=0.7, list = FALSE)
+
+UN_all.test <-UN[partition2,]
+UN_all.train <- UN[-partition2,]
+
+
+#Using linear discriminant analysis to train a classifier to predict the continent of each country.
+
+predictors <- names(UN_all.train)[3:26] 
+formula_str <- paste("continent ~", paste(predictors, collapse = " + "))
+lda_formula <- as.formula(formula_str)
+
+#Using this formula in lda
+UN_lda2 <- lda(formula = lda_formula, data = UN_all.train)
+UN_all.predict <-predict(UN_lda2, UN_all.test)
+
+
+#Test the accuracy of your model 
+
+accuracy = mean(UN_all.predict$class == UN_all.test$continent) *100 
+print(paste("The predictive accuracy is :", round(accuracy, 2),"%" )) #calculating the predictive accuracy on the test set
+
+
+```
+
+#The predictive accuracy 51.49 % appears to have dropped using all the life expectancy, population and gdp per capita over 55 years as compared to the previous training with an accuracy of 61.39 %. So we adopt the first model variables.
+
+
+
+#. 
+## Linear regression
+
+```{r}
+install.packages("pls")
+library(pls)
+```
+
+
+```{r}
+lifeExp_2007= lifeExp[,12]
+lifeExp_2007 = data.frame(lifeExp_2007)
+
+combined_UN = cbind.data.frame(lifeExp_2007, gdp)
+
+```
+
+
+
+```{r}
+# Renaming year columns to start with 'gdp_' prefix
+colnames(combined_UN)[2:13] <- paste("gdp", names(combined_UN)[2:13], sep = "_")
+
+```
+
+```{r}
+
+predictors = names(combined_UN)[2:13]
+formula_str = paste("lifeExp_2007~", paste(predictors, collapse = " + "))
+lm_formula = as.formula(formula_str)
+
+```
+
+
+if we find the coefficient directly R deals with this by only using the first 13 covariates, and returns NA for the other 141-13 = 128 coefficients.
+
+#Trying linear regression with raw gdp values
+
+```{r}
+#splitting the data into training and test sets.
+
+set.seed(123)
+
+train <- sample(1:141, size =100, replace = FALSE)
+
+
+#splitting the data set before doing the PCA
+combined_UN.train <- combined_UN[train,]
+combined_UN.test  <- combined_UN[-train,]
+
+
+#Building a model on the training set
+
+GDP_data = combined_UN.train[, 2:13]
+#combined_UN.train$lifeExp_2007~.
+
+combined_UN_lm <-lm(formula =lm_formula, data=combined_UN.train) # Fitting the linear model
+
+
+```
+
+```{r}
+#Prediction
+GDP_data_test =combined_UN.test[, 2:13]
+
+(combined_UN.pred <- predict(combined_UN_lm, newdata = GDP_data_test))
+```
+```{r}
+#checking for error
+
+errors <- combined_UN.pred - combined_UN.test$lifeExp_2007
+
+sqrt(mean((errors)^2))
+```
+#The range of the life expectancy varies from 40 to 80+ years, the models life expectancy deviates from the actual observed life expectancy by about 8.883 years. We try the log method to improve on the model.
+
+
+
+
+#Trying linear regression with log gdp values
+
+```{r}
+
+#convert raw values to log values
+combined_UN = log(combined_UN)
+
+#splitting the data into training and test sets.
+
+set.seed(123)
+
+train <- sample(1:141, size =100, replace = FALSE)
+
+#splitting the data set before doing the PCA
+combined_UN.train <- combined_UN[train,]
+combined_UN.test  <- combined_UN[-train,]
+
+
+#Building a model on the training set
+
+GDP_data = combined_UN.train[, 2:13]
+#combined_UN.train$lifeExp_2007~.
+
+combined_UN_lm <-lm(formula =lm_formula, data=combined_UN.train) # Fitting the linear model
+
+
+```
+
+
+
+```{r}
+#Prediction
+GDP_data_test =combined_UN.test[, 2:13]
+
+(combined_UN.pred <- predict(combined_UN_lm, newdata = GDP_data_test))
+```
+```{r}
+#checking for error
+
+errors <- combined_UN.pred - combined_UN.test$lifeExp_2007
+
+sqrt(mean((errors)^2))
+```
+#The range of the life expectancy varies from 40 to 80+ years, the models life expectancy deviates from the actual observed life expectancy by about  0.122 years.The log method has a lower root mean square error.
+
+
+
+#Trying Ridge regression method.
+```{r}
+install.packages("glmnet", dependencies = TRUE)
+library(glmnet)
+```
+
+```{r}
+combined_UN.ridge <- glmnet(combined_UN[,2:13], combined_UN$lifeExp_2007, alpha =0) #alpha =0 is ridge, alpha=1 is lasso
+plot(combined_UN.ridge, xvar ='lambda')
+```
+#Figure 16. Plot of regression coefficients against the log of degree of regularization (log λ).
+#The regularization is not much for small values of lambda but for large values of lambda the values shrink towards zeroregression coefficient.
+
+#Picking the best value using cross validation
+```{r}
+
+# Converting  to matrix
+X <- as.matrix(combined_UN[,2:13])
+
+
+cv_fit <- cv.glmnet(X,  combined_UN$lifeExp_2007, alpha =0)
+plot(cv_fit)
+
+
+```
+Figure 17.
+
+
+```{r}
+cv_fit$lambda.min
+```
+#tells us the value of lambda that gives us the minimum error is 0.0269  and the value of lambda that was minimum standard error of that minimum is 0.9236.
+
+
+
+```{r}
+cv_fit$lambda.1se
+
+```
+0.9236 is the largest value of lambda that gives a prediction error within one standard deviation of the minimum.
+
+#so ridge and log linear regression has similar errors. The two methods worked very similarly.The use of log values of gdp appears to yield lesser mean square errors in this study.
+
+
+
+
+#.PCA
+#PCA with correlation matrix: we use the correlation matrix , the scaled version of the PCA, because there is a big difference in the variation of the gdp, population and the life expectancy variables.
+
+
+```{r}
+
+gdps.pca =prcomp(gdp, scale =TRUE)
+gdps.pca
+plot(gdps.pca)
+```
+
+```{r}
+install.packages("ggfortify")
+```
+```{r}
+install.packages("factoextra")
+library(factoextra)
+```
+
+
+```{r}
+pca_scores = as.data.frame(gdps.pca$x)
+pca_result = cbind(UN[, 1], pca_scores)
+colnames(pca_result)[1] = c("continent")
+
+```
+
+
+```{r}
+pca_result$Country = rownames(pca_result)
+ggplot(pca_result, aes(x = PC1, y = PC2, color = continent, label = Country)) +
+  geom_point() +  # points colored by continent
+  geom_text(aes(label=Country), vjust=-0.5, hjust=0.5, size=2.5, check_overlap = TRUE) +  #country labels
+  theme_minimal() +  
+  labs(title = "PCA of GDP",
+       x = "Principal Component 1",
+       y = "Principal Component 2",
+       color = "Continent")  # labels
+```
+
+
+
+
+
+
+
+
+
+#Life expectancy PCA with covariance matrix
+```{r}
+lifeExp.pca =prcomp(lifeExp, scale =TRUE)
+plot(lifeExp.pca)
+
+```
+
+
+```{r}
+life_pca_score = as.data.frame(lifeExp.pca$x)
+life_pca_result = cbind(UN[, 1], life_pca_score)
+colnames(life_pca_result)[1] = c("continent")
+
+```
+
+
+#choosing to retain 2 PCA
+```{r}
+library(ggplot2)
+life_pca_result$Country = rownames(life_pca_result)
+ggplot(life_pca_result, aes(x = PC1, y = PC2, color = continent, label = Country)) +
+  geom_point() +  # points colored by continent
+  geom_text(aes(label=Country), vjust=-0.5, hjust=0.5, size=2.5, check_overlap = TRUE) +  #country labels
+  theme_minimal() +  
+  labs(title = "PCA of Life Expectancy",
+       x = "Principal Component 1",
+       y = "Principal Component 2",
+       color = "Continent")  # labels
+```
+
+
+
+#first PC score for life expectancy against the first PC score for GDP
+
+
+```{r}
+gdp_pca_scores <- as.data.frame(gdps.pca$x[, 1])
+life_pca_scores <- as.data.frame(lifeExp.pca$x[, 1])
+
+combined_df <- data.frame(
+  Country = UN[, 2],
+  Continent = UN[, 1], 
+  PC1_GDP = gdp_pca_scores[, 1],
+  PC1_LifeExp = life_pca_scores[, 1]
+)
+
+```
+
+
+```{r}
+library(ggplot2)
+
+ggplot(combined_df, aes(x = PC1_GDP, y = PC1_LifeExp, color = Continent, label = Country)) +
+  geom_point() +  # Add points, colored by Continent
+  geom_text(aes(label = Country), vjust = 1.5, size = 3, check_overlap = TRUE) +  # country labels
+  theme_minimal() +  
+  labs(title = "First PC Score for Life Expectancy vs First PC Score for GDP",
+       x = "First PC Score for GDP",
+       y = "First PC Score for Life Expectancy",
+       color = "Continent")  # plot labels
+```
+#First PC Score for Life Expectancy vs First PC Score for GDP plot explains that the african countries have more negative values compared europe and oceania. Some parts of asia have the pca around zero.
+
+
+```{r}
+library(ggfortify)
+autoplot(gdps.pca, data=combined_df, colour ='Continent', scale =FALSE, shape= 'Continent')
+```
+#this explains, the first PC score explains 91.85% of the variance in the data. that the african countries have more negative values compared europe and oceania. Some parts of asia have the pca around zero
+
+
+
+```{r}
+fviz(gdps.pca, element = 'var' )
+```
+
+
+
+
+
+
+
+
+#.
+#CCA
+```{r}
+X <- log(gdp)
+Y <- lifeExp
+```
+
+```{r}
+install.packages("CCA")
+```
+
+
+```{r}
+library(CCA)
+
+(UN.cca <- cc(X,Y))
+
+
+
+```
+```{r}
+par(mfrow=c(2,2))
+plot(UN.cca$scores$xscores[,1], UN.cca$scores$xscores[,2], 
+```
+
+#A scatter plot of the two canonical correlation variables #plot x-scores against y-scores for 1st CC
+```{r}
+ccX = UN.cca$scores$xscores[,1]
+ccY = UN.cca$scores$yscores[,1]
+
+cca.out <- data.frame(labels = row.names(gdp),ccX= ccX, ccY=ccY)
+
+library(ggplot2)
+ggplot(cca.out, aes(x= ccX, y= ccY, label=row.names(gdp)))+   geom_point() +
+geom_text(aes(label=row.names(gdp)),hjust=0, vjust=0, size=2)
+```
+```{r}
+UN.cca$cor
+```
+#The first canonical correlation has a strong between the log(gdp) and the life expectancy, the 2nd correlation and third corrlation reduces to an average.The log(gdp) against the Life expectancy in CCA  has a linear curve with a high correlation of 0.92 compared to gdp against Life expectancy for PCA having a logarithmic curve where the data increases rapidly but then flattens to a plateau. The log GDP values gives a more balanced relationship in CCA compared to PCA.
+
+
+```{r}
+y <- cc(gdp, lifeExp)
+y$cor
+```
+
+
+```{r}
+```
+
+
+
+
+
+
+
+
+
+#.
+#Multidimensional Scaling
+
+```{r}
+
+country_names <- row.names(UN)
+UN.transformed <- cbind(log(UN[,3:14]), UN[,15:26], log(UN[,27:38]))
+```
+
+```{r}
+head(UN.transformed)
+```
+#2 dimensional multidimensional scaling
+```{r}
+install.packages("ggpubr", dependencies = TRUE)
+```
+```{r}
+install.packages("ggrepel")
+
+```
+```{r}
+head(UN)
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(ggrepel) 
+
+#data
+UN.transformed <- cbind(log(UN[,3:14]), UN[,15:26], log(UN[,27:38]))
+row.names(UN.transformed) <- row.names(UN)  
+
+# MDS
+mds <- UN.transformed |>  
+  dist() |>
+  cmdscale() |> 
+  as.data.frame()
+
+colnames(mds) <-  c("Dim1", "Dim2")
+mds$country <- row.names(UN.transformed)
+mds$continent <- UN$continent 
+
+
+ggplot(mds, aes(x = Dim1, y = Dim2, color = continent, label = country)) +
+  geom_point() +
+  geom_text_repel(aes(label = country), size = 3, max.overlaps = Inf) +
+  scale_color_brewer(type = 'qual', palette = "Set1") +
+  labs(title = "2D MDS Representation of transformed UN Data", x = "Dimension 1", y = "Dimension 2")
+  theme_minimal()
+
+
+# plot display
+ggsave("MDS_plot.png", width = 10, height = 8)  
+
+
+```
+#There appears to be three clusters, Africa having a seperate cluster at the predominantly at the left axis of the dimension, some parts of Africa, Asia and America form a different cluster at the middle top, then  Europe and Oceania forms another different cluster at the right.
+
+
+
+
