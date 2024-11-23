@@ -1,4 +1,5 @@
 1. Multivariate Analysis project:
+   
 **Project overview:** This is an analysis of United Nations dataset about the GDP per capita, the life expectancy, and the population of 141 different countries from 1952 to 2007 at a five-year interval.The goal was to explore patterns and relationships between these variables and how they changed over time. By examining this data, we aimed to uncover insights into economic growth, population trends, and their impact on life expectancy.
 
 **Problem statement:**
@@ -12,6 +13,7 @@ Understanding the relationship between economic factors like GDP and social outc
 4. Regression models highlighted a strong link between GDP and life expectancy, with log GDP providing the best predictive accuracy.
 
 2. Statistical Data analysis
+   
 **Project overview:** This is a statistical analysis for an ornithologist for the data collected on kittiwakes, a type of gull with two sub-species of kittiwake, black-legged and red-legged. The analysis consists of the exploratory data analysis from an observation point, over a 28day period, statistical inference based on the summary statistics of the observation data and determining the confidence interval from an observation time. Test of the hypothesis that the decline in kittiwake numbers over time is independent of site and an estimation for the number of breeding pairs at a site. This analysis covers checks for linear relationship, correlation, fitting linear models, check for dependence and drawing inference from multiple comparisons between the sub-species of the kittiwake.
 
 **Problem Statement:**
